@@ -8,7 +8,11 @@ import net.nightwhistler.htmlspanner.spans.*;
 import net.nightwhistler.htmlspanner.style.Style;
 import net.nightwhistler.htmlspanner.style.StyleCallback;
 import net.nightwhistler.htmlspanner.style.StyleValue;
+import org.htmlcleaner.BaseToken;
+import org.htmlcleaner.ContentNode;
 import org.htmlcleaner.TagNode;
+
+import java.util.List;
 
 /**
  * TagNodeHandler for any type of text that may be styled using CSS.
@@ -79,7 +83,23 @@ public class StyledTextHandler extends TagNodeHandler {
     public void handleTagNode(TagNode node, SpannableStringBuilder builder, int start, int end, Style useStyle, SpanStack stack ) {
 
         if ( useStyle.getDisplayStyle() == Style.DisplayStyle.BLOCK ) {
-            appendNewLine(builder);
+            TagNode parent = node.getParent();
+            if (parent == null) {
+                appendNewLine(builder);
+            } else {
+                int index = parent.getChildIndex(node) + 1;
+                List<? extends BaseToken> allChildren = parent.getAllChildren();
+                for (int i = index; i < allChildren.size(); i++) {
+                    BaseToken children = allChildren.get(i);
+                    if (children instanceof TagNode) {
+                        appendNewLine(builder);
+                        break;
+                    } else if (children instanceof ContentNode && !"\n".equals(((ContentNode) children).getContent())) {
+                        appendNewLine(builder);
+                        break;
+                    }
+                }
+            }
 
             //If we have a bottom margin, we insert an extra newline. We'll manipulate the line height
             //of this newline to create the margin.

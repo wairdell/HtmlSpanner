@@ -470,8 +470,8 @@ public class HtmlSpanner {
 
         Style paragraphStyle = new Style()
                 .setDisplayStyle(Style.DisplayStyle.BLOCK)
-                .setMarginBottom(
-                        new StyleValue(1.0f, StyleValue.Unit.EM));
+                /*.setMarginBottom(
+                        new StyleValue(1.0f, StyleValue.Unit.EM))*/;
 
 
         TagNodeHandler pHandler = new BorderAttributeHandler(wrap(new StyledTextHandler(paragraphStyle)));

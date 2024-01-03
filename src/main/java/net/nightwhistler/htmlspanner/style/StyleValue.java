@@ -59,6 +59,14 @@ public class StyleValue {
             }
         }
 
+        if ( value.equals("small") ) {
+            return new StyleValue(0.8F, Unit.PERCENTAGE);
+        }
+
+        if ( value.equals("big") ) {
+            return new StyleValue(1.25F, Unit.PERCENTAGE);
+        }
+
         return null;
     }
 
