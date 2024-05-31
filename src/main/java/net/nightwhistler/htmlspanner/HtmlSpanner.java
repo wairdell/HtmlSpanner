@@ -22,6 +22,7 @@ import java.io.Reader;
 import java.util.HashMap;
 import java.util.Map;
 
+import android.graphics.Color;
 import android.util.Log;
 
 import net.nightwhistler.htmlspanner.css.CSSCompiler;
@@ -81,6 +82,31 @@ public class HtmlSpanner {
         @Override
         public Integer patchFontColor(Style style) {
             return style.getColor();
+        }
+    };
+
+
+    private ParsePatcher parsePatcher = new ParsePatcher() {
+        @Override
+        public int parseCSSColor(String colorString) {
+            //Check for CSS short-hand notation: #0fc -> #00ffcc
+            if ( colorString.length() == 4 && colorString.startsWith("#") ) {
+                StringBuilder builder = new StringBuilder("#");
+                for ( int i =1; i < colorString.length(); i++ ) {
+                    //Duplicate each char
+                    builder.append( colorString.charAt(i) );
+                    builder.append( colorString.charAt(i) );
+                }
+
+                colorString = builder.toString();
+            }
+
+            return Color.parseColor(colorString);
+        }
+
+        @Override
+        public int parsePxValue(String value) {
+            return Integer.parseInt(value.substring(0, value.length() -2));
         }
     };
 
@@ -169,6 +195,14 @@ public class HtmlSpanner {
      */
     public ContrastPatcher getContrastPatcher() {
         return this.contrastPatcher;
+    }
+
+    public ParsePatcher getParsePatcher() {
+        return parsePatcher;
+    }
+
+    public void setParsePatcher(ParsePatcher parsePatcher) {
+        this.parsePatcher = parsePatcher;
     }
 
     /**

@@ -49,7 +49,7 @@ public class FontHandler extends StyledTextHandler {
             style = style.setFontFamily(family);
 
             if ( size != null ) {
-                CSSCompiler.StyleUpdater updater = CSSCompiler.getStyleUpdater("font-size", size);
+                CSSCompiler.StyleUpdater updater = CSSCompiler.getStyleUpdater("font-size", size, getSpanner());
 
                 if ( updater != null ) {
                     style = updater.updateStyle(style, getSpanner() );
@@ -58,7 +58,7 @@ public class FontHandler extends StyledTextHandler {
 
             if ( color != null && getSpanner().isUseColoursFromStyle() ) {
 
-                CSSCompiler.StyleUpdater updater = CSSCompiler.getStyleUpdater("color", color);
+                CSSCompiler.StyleUpdater updater = CSSCompiler.getStyleUpdater("color", color, getSpanner());
 
                 if ( updater != null ) {
                     style = updater.updateStyle(style, getSpanner() );

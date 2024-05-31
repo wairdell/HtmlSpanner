@@ -4,10 +4,12 @@ import android.text.SpannableStringBuilder;
 import android.util.Log;
 import net.nightwhistler.htmlspanner.SpanStack;
 import net.nightwhistler.htmlspanner.TagNodeHandler;
+import net.nightwhistler.htmlspanner.css.CSSCompiler;
 import net.nightwhistler.htmlspanner.spans.*;
 import net.nightwhistler.htmlspanner.style.Style;
 import net.nightwhistler.htmlspanner.style.StyleCallback;
 import net.nightwhistler.htmlspanner.style.StyleValue;
+
 import org.htmlcleaner.BaseToken;
 import org.htmlcleaner.ContentNode;
 import org.htmlcleaner.TagNode;
@@ -39,6 +41,23 @@ public class StyledTextHandler extends TagNodeHandler {
     public void beforeChildren(TagNode node, SpannableStringBuilder builder, SpanStack spanStack) {
 
         Style useStyle = spanStack.getStyle( node, getStyle() );
+
+        String styleAttr = node.getAttributeByName("style");
+        if ( getSpanner().isAllowStyling() && styleAttr != null ) {
+            String[] pairs = styleAttr.split(";");
+            for ( String pair: pairs ) {
+                String[] keyVal = pair.split(":");
+                if (keyVal.length != 2) continue;
+                String key = keyVal[0].toLowerCase().trim();
+                if (!"margin-top".equals(key)) continue;
+                String value = keyVal[1].toLowerCase().trim();
+                CSSCompiler.StyleUpdater updater = CSSCompiler.getStyleUpdater(key, value, getSpanner());
+                if ( updater != null ) {
+                    useStyle = updater.updateStyle(useStyle, getSpanner());
+                }
+                break;
+            }
+        }
 
         if (builder.length() > 0 &&  useStyle.getDisplayStyle() == Style.DisplayStyle.BLOCK ) {
 

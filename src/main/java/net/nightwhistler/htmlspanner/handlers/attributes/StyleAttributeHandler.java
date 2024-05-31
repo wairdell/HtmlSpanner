@@ -50,7 +50,7 @@ public class StyleAttributeHandler extends WrappingStyleHandler  {
             String key =  keyVal[0].toLowerCase().trim();
             String value = keyVal[1].toLowerCase().trim();
 
-            CSSCompiler.StyleUpdater updater = CSSCompiler.getStyleUpdater(key, value);
+            CSSCompiler.StyleUpdater updater = CSSCompiler.getStyleUpdater(key, value, getSpanner());
 
             if ( updater != null ) {
                 style = updater.updateStyle(style, getSpanner());

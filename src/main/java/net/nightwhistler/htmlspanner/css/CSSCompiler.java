@@ -1,13 +1,11 @@
 package net.nightwhistler.htmlspanner.css;
 
-import android.graphics.Color;
 import android.util.Log;
 import com.osbcp.cssparser.PropertyValue;
 import com.osbcp.cssparser.Rule;
 import com.osbcp.cssparser.Selector;
 import net.nightwhistler.htmlspanner.FontFamily;
 import net.nightwhistler.htmlspanner.HtmlSpanner;
-import net.nightwhistler.htmlspanner.handlers.UnderlineHandler;
 import net.nightwhistler.htmlspanner.style.Style;
 import net.nightwhistler.htmlspanner.style.StyleValue;
 import org.htmlcleaner.TagNode;
@@ -50,7 +48,7 @@ public class CSSCompiler {
 
         for ( PropertyValue propertyValue: rule.getPropertyValues() ) {
             CSSCompiler.StyleUpdater updater = CSSCompiler.getStyleUpdater(propertyValue.getProperty(),
-                    propertyValue.getValue());
+                    propertyValue.getValue(), spanner);
 
             if ( updater != null ) {
                 styleUpdaters.add( updater );
@@ -63,23 +61,6 @@ public class CSSCompiler {
         String asText = rule.toString();
 
         return new CompiledRule(spanner, matchers, styleUpdaters, asText );
-    }
-
-    public static Integer parseCSSColor( String colorString ) {
-
-        //Check for CSS short-hand notation: #0fc -> #00ffcc
-        if ( colorString.length() == 4 && colorString.startsWith("#") ) {
-            StringBuilder builder = new StringBuilder("#");
-            for ( int i =1; i < colorString.length(); i++ ) {
-                //Duplicate each char
-                builder.append( colorString.charAt(i) );
-                builder.append( colorString.charAt(i) );
-            }
-
-            colorString = builder.toString();
-        }
-
-        return Color.parseColor(colorString);
     }
 
     public static List<TagNodeMatcher> createMatchersFromSelector( Selector selector ) {
@@ -177,11 +158,11 @@ public class CSSCompiler {
         }
     }
 
-    public static StyleUpdater getStyleUpdater( final String key, final String value) {
+    public static StyleUpdater getStyleUpdater( final String key, final String value, HtmlSpanner spanner) {
 
         if ( "color".equals(key)) {
             try {
-                final Integer color = parseCSSColor(value);
+                final Integer color = spanner.getParsePatcher().parseCSSColor(value);
                 return new StyleUpdater() {
                     @Override
                     public Style updateStyle(Style style, HtmlSpanner spanner) {
@@ -197,7 +178,7 @@ public class CSSCompiler {
 
         if ( "background-color".equals(key) ) {
             try {
-                final Integer color = parseCSSColor(value);
+                final Integer color = spanner.getParsePatcher().parseCSSColor(value);
                 return new StyleUpdater() {
                     @Override
                     public Style updateStyle(Style style, HtmlSpanner spanner) {
@@ -282,7 +263,7 @@ public class CSSCompiler {
 
         if ( "font-size".equals(key)) {
 
-            final StyleValue styleValue = StyleValue.parse( value );
+            final StyleValue styleValue = StyleValue.parse( value, spanner.getParsePatcher() );
 
             if ( styleValue != null ) {
 
@@ -325,7 +306,7 @@ public class CSSCompiler {
 
         if ( "margin-bottom".equals(key) ) {
 
-            final StyleValue styleValue = StyleValue.parse( value );
+            final StyleValue styleValue = StyleValue.parse( value , spanner.getParsePatcher());
 
             if ( styleValue != null ) {
                 return new StyleUpdater() {
@@ -339,7 +320,7 @@ public class CSSCompiler {
 
         if ( "margin-top".equals(key) ) {
 
-            final StyleValue styleValue = StyleValue.parse( value );
+            final StyleValue styleValue = StyleValue.parse( value, spanner.getParsePatcher() );
 
             if ( styleValue != null ) {
                 return new StyleUpdater() {
@@ -353,7 +334,7 @@ public class CSSCompiler {
 
         if ( "margin-left".equals(key) ) {
 
-            final StyleValue styleValue = StyleValue.parse( value );
+            final StyleValue styleValue = StyleValue.parse( value, spanner.getParsePatcher() );
 
             if ( styleValue != null ) {
                 return new StyleUpdater() {
@@ -367,7 +348,7 @@ public class CSSCompiler {
 
         if ( "margin-right".equals(key) ) {
 
-            final StyleValue styleValue = StyleValue.parse( value );
+            final StyleValue styleValue = StyleValue.parse( value, spanner.getParsePatcher() );
 
             if ( styleValue != null ) {
                 return new StyleUpdater() {
@@ -380,11 +361,11 @@ public class CSSCompiler {
         }
 
         if ( "margin".equals( key ) ) {
-            return parseMargin( value );
+            return parseMargin( value, spanner );
         }
 
         if ( "text-indent".equals(key) ) {
-            final StyleValue styleValue = StyleValue.parse( value );
+            final StyleValue styleValue = StyleValue.parse( value, spanner.getParsePatcher() );
 
             if ( styleValue != null ) {
                 return new StyleUpdater() {
@@ -428,7 +409,7 @@ public class CSSCompiler {
 
         if ( "border-color".equals( key ) ) {
             try {
-                final Integer borderColor = parseCSSColor(value);
+                final Integer borderColor = spanner.getParsePatcher().parseCSSColor(value);
                 return new StyleUpdater() {
                     @Override
                     public Style updateStyle(Style style, HtmlSpanner spanner) {
@@ -443,7 +424,7 @@ public class CSSCompiler {
 
         if ( "border-width".equals( key ) ) {
 
-            final StyleValue borderWidth = StyleValue.parse(value);
+            final StyleValue borderWidth = StyleValue.parse(value, spanner.getParsePatcher());
             if ( borderWidth != null ) {
                 return new StyleUpdater() {
                     @Override
@@ -459,7 +440,24 @@ public class CSSCompiler {
 
 
         if ( "border".equals( key ) ) {
-           return parseBorder( value );
+           return parseBorder( value, spanner );
+        }
+
+        if ( "border-radius".equals( key ) ) {
+
+            final StyleValue borderRadius = StyleValue.parse(value, spanner.getParsePatcher());
+            if ( borderRadius != null ) {
+                return new StyleUpdater() {
+                    @Override
+                    public Style updateStyle(Style style, HtmlSpanner spanner) {
+                        return style.setBorderRadius( borderRadius );
+                    }
+                };
+            } else {
+                Log.e("CSSCompiler", "Could not parse border-color " + value );
+                return null;
+            }
+
         }
 
         Log.d("CSSCompiler", "Don't understand CSS property '" + key + "'. Ignoring it.");
@@ -490,13 +488,14 @@ public class CSSCompiler {
 
     /**
      * Parses a border definition.
-     *
+     * <p>
      * Border definitions are a complete mess, since the order is not set.
      *
      * @param borderDefinition
+     * @param spanner
      * @return
      */
-    private static StyleUpdater parseBorder( String borderDefinition ) {
+    private static StyleUpdater parseBorder(String borderDefinition, HtmlSpanner spanner) {
 
         String[] parts = borderDefinition.split("\\s");
 
@@ -510,7 +509,7 @@ public class CSSCompiler {
 
             if ( borderWidth == null ) {
 
-                borderWidth = StyleValue.parse( part );
+                borderWidth = StyleValue.parse( part, spanner.getParsePatcher() );
 
                 if ( borderWidth != null ) {
                     Log.d("CSSParser", "Parsed " + part + " as border-width");
@@ -520,7 +519,7 @@ public class CSSCompiler {
 
             if ( borderColor == null ) {
                 try {
-                    borderColor = parseCSSColor(part);
+                    borderColor = spanner.getParsePatcher().parseCSSColor(part);
                     Log.d("CSSParser", "Parsed " + part + " as border-color");
                     continue;
                 } catch ( IllegalArgumentException ia ) {
@@ -567,7 +566,7 @@ public class CSSCompiler {
 
     }
 
-    private static StyleUpdater parseMargin( String marginValue ) {
+    private static StyleUpdater parseMargin(String marginValue, HtmlSpanner spanner) {
 
         String[] parts = marginValue.split("\\s");
 
@@ -600,10 +599,10 @@ public class CSSCompiler {
             leftMarginString = parts[3];
         }
 
-        final StyleValue marginBottom = StyleValue.parse( bottomMarginString );
-        final StyleValue marginTop = StyleValue.parse( topMarginString );
-        final StyleValue marginLeft = StyleValue.parse( leftMarginString );
-        final StyleValue marginRight = StyleValue.parse( rightMarginString );
+        final StyleValue marginBottom = StyleValue.parse( bottomMarginString, spanner.getParsePatcher() );
+        final StyleValue marginTop = StyleValue.parse( topMarginString, spanner.getParsePatcher() );
+        final StyleValue marginLeft = StyleValue.parse( leftMarginString, spanner.getParsePatcher() );
+        final StyleValue marginRight = StyleValue.parse( rightMarginString, spanner.getParsePatcher() );
 
 
         return new StyleUpdater() {

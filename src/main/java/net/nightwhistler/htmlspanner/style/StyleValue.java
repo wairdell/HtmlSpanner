@@ -2,6 +2,7 @@ package net.nightwhistler.htmlspanner.style;
 
 import android.util.Log;
 import net.nightwhistler.htmlspanner.HtmlSpanner;
+import net.nightwhistler.htmlspanner.ParsePatcher;
 
 /**
  * Created with IntelliJ IDEA.
@@ -19,7 +20,7 @@ public class StyleValue {
 
     private Unit unit;
 
-    public static StyleValue parse( String value ) {
+    public static StyleValue parse(String value, ParsePatcher parsePatcher) {
 
         if ( value.equals("0") ) {
             return new StyleValue(0f, Unit.EM);
@@ -28,7 +29,7 @@ public class StyleValue {
         if ( value.endsWith("px") ) {
 
             try {
-                final Integer intValue = Integer.parseInt( value.substring(0, value.length() -2) );
+                final Integer intValue = parsePatcher.parsePxValue(value);
                 return new StyleValue(intValue);
             } catch (NumberFormatException nfe ) {
                 Log.e("StyleValue", "Can't parse value: " + value );
